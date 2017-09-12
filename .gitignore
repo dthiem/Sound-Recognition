@@ -1,4 +1,9 @@
 # Add any directories, files, or patterns you don't want to be tracked by version control
 $ cat .gitignore
 /fold*
-wholeTracks.hdf5
+*.hdf5
+big*
+*.png
+regular*
+small*
+test
