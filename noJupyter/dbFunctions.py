@@ -36,7 +36,7 @@ def split (splitStep, dataset, *data):
                     while iterator + splitStep <= tempTrack.shape[1]:
                         trainData.append(tempTrack[: ,iterator : iterator + splitStep,:])
                         trainLabels.append(classNumber)
-                        iterator += splitStep
+                        iterator += splitStep/2
             
             #create test arrays         
             for fold in data[1]:
@@ -70,7 +70,7 @@ def split (splitStep, dataset, *data):
                     while iterator + splitStep <= tempTrack.shape[1]:
                         trainData.append(tempTrack[: ,iterator : iterator + splitStep,:])
                         trainLabels.append(classNumber)
-                        iterator += splitStep
+                        iterator += splitStep/2
                         
             # create tune arrays
             for fold in data[1]:
@@ -88,7 +88,7 @@ def split (splitStep, dataset, *data):
                     while iterator + splitStep <= tempTrack.shape[1]:
                         tuneData.append(tempTrack[: ,iterator : iterator + splitStep,:])
                         tuneLabels.append(classNumber)
-                        iterator += splitStep
+                        iterator += splitStep/2
             
             # create test arrays
             for fold in data[2]:
