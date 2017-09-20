@@ -25,14 +25,21 @@ def appendTracks(data,labels,paths,fp):
 	# librosa operates on (lenght, channels) matrices, wheras soundfile gave us (channels, lenght) 
 	# so we transpose
 	sound = np.transpose(sound)
-	sound = librosa.core.to_mono(sound)
 	# resample so every wave has same sampling rate
 	sound = librosa.core.resample(sound, sr, 22050)
 	# set class number
 	classNumber = int(fp.split("/")[2].split("-")[1])
 	# compute and set mel spectrogram
-	D = np.abs(librosa.stft(sound, hop_length=512,  win_length=1024))**2
-	mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=22050, n_mels = 60),ref_power= np.max)
+	if (sound.shape[0] == 2):
+
+		D = [np.abs(librosa.stft(channel, hop_length=512,  win_length=1024))**2 for channel in sound]
+		mel = [librosa.logamplitude(librosa.feature.melspectrogram(S=channel, sr=22050, n_mels = 60),ref_power= np.max) for channel in D]
+		mel = np.array(mel)
+		mel = np.mean(mel, axis = 0)
+	else:
+		D = np.abs(librosa.stft(sound, hop_length=512,  win_length=1024))**2
+		mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=22050, n_mels = 60),ref_power= np.max)
+	
 	delta  = librosa.feature.delta(mel)
 	outData = np.array([mel,delta])
 	outData = np.swapaxes(outData, 0, 2)
@@ -43,17 +50,25 @@ def appendTracks(data,labels,paths,fp):
 	fp = "/".join(fp[1:])
 	paths.append(fp)
 	pitches = 1
-#     for pitch in pitchVolumes:
-#         temp = librosa.effects.pitch_shift(sound, 44100, pitch)
-#         D = np.abs(librosa.stft(temp, hop_length=1024,  win_length=1024))**2
-#         mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=44100, n_mels = 128),ref_power= np.max)
-#         newFp = fp.split('.')
-#         newFp[0] += ('-pitch'+str(pitches)+'.')
-#         newFp=''.join(newFp)
-#         pitches += 1
-#         data.append(mel)
-#         labels.append(classNumber)
-#         paths.append(newFp)
+	for pitch in pitchVolumes:
+		if sound.shape[0] == 2:
+			temp = [librosa.effects.pitch_shift(channel, 22050, pitch) for channel in sound]
+			D = [np.abs(librosa.stft(channel, hop_length=512,  win_length=1024))**2 for channel in temp]
+			mel = [librosa.logamplitude(librosa.feature.melspectrogram(S=channel, sr=22050, n_mels = 60),ref_power= np.max) for channel in D]
+			mel = np.array(mel)
+			mel = np.mean(mel, axis = 0)
+		else:
+			temp = librosa.effects.pitch_shift(sound, 22050, pitch)
+			D = np.abs(librosa.stft(temp, hop_length=512,  win_length=1024))**2
+			mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=22050, n_mels = 60),ref_power= np.max)
+
+		newFp = fp.split('.')
+		newFp[0] += ('-pitch'+str(pitches)+'.')
+		newFp=''.join(newFp)
+		pitches += 1
+		data.append(mel)
+		labels.append(classNumber)
+		paths.append(newFp)
 
 from multiprocessing import Process, Lock, Pipe,Event
 
@@ -81,14 +96,16 @@ if __name__ == '__main__':
 		print ("There is already such a hdf5 database!")
 		exit()
 
-	threads= []
-	threadNumber = min(sys.argv[2], 10)
-	connections=[0]* threadNumber
+	threadNumber = min(int(sys.argv[2]), 10)
 	
 	
 	## create threads, assign them methods and start
 	foldCounter = 1 
 	while (foldCounter <= 10) :
+
+		threads= []
+		connections=[0]* threadNumber
+
 		for x in xrange(threadNumber):
 			if foldCounter >= 11 :
 				del connections[x:], threads[x:]

@@ -53,7 +53,7 @@ model.add(Dense(10, activation='softmax'))
 
 sgd = SGD(lr=0.002, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics = ['accuracy'])
-model.fit(trainData, trainLabels, batch_size=1000, epochs=30,verbose=2)
+model.fit(trainData, trainLabels, batch_size=1000, epochs=300,verbose=2)
 
 
 ##predict on folds not used in training (currently 8,9,10 which is validation set + test set)
