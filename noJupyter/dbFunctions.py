@@ -68,7 +68,7 @@ def split (splitStep, dataset, *data):
                     
                         
                     while iterator + splitStep <= tempTrack.shape[1]:
-                        trainData.append(tempTrack[: ,iterator : iterator + splitStep,:])
+                        trainData.append(tempTrack[: ,iterator : iterator + splitStep])
                         trainLabels.append(classNumber)
                         iterator += splitStep/2
                         
@@ -86,7 +86,7 @@ def split (splitStep, dataset, *data):
                     
                     iterator = 0
                     while iterator + splitStep <= tempTrack.shape[1]:
-                        tuneData.append(tempTrack[: ,iterator : iterator + splitStep,:])
+                        tuneData.append(tempTrack[: ,iterator : iterator + splitStep])
                         tuneLabels.append(classNumber)
                         iterator += splitStep/2
             
@@ -111,7 +111,7 @@ def split (splitStep, dataset, *data):
 
 
 ## predicts classes on whole database or specified fold from database
-def predictOnDataBase(model, splitStep, dataset, *data):
+def predictOnDataBase(models, splitStep, dataset, mean, std, *data):
     with h5py.File(dataset +".hdf5") as f:
         ## prepare list of folds to work on
         grps = []
@@ -141,20 +141,39 @@ def predictOnDataBase(model, splitStep, dataset, *data):
                 ## if clip is too short to predict even 1 window, expand it
                 if temp.shape[1]<splitStep:
                     t = temp.shape[1]
-                    b = np.zeros((temp.shape[0],splitStep,2))
-                    b[:, :-splitStep+t,:]= temp
+                    b = np.zeros((temp.shape[0],splitStep))
+                    b[:, :-splitStep+t]= temp
                     trackToPredict.append(b)
                 else:
                     ## iterate through clip and split it into windows
                     while iterator + splitStep <= temp.shape[1]:
-                        trackToPredict.append(temp[: ,iterator : iterator + splitStep,:])
-                        iterator += splitStep
+                        trackToPredict.append(temp[: ,iterator : iterator + splitStep])
+                        iterator += splitStep/2
                     
                 ## prepare clip as a corrent CNN input and predict probabilities
                 trackToPredict= np.array(trackToPredict)
                 #trackToPredict = np.expand_dims(trackToPredict, axis=3)
-                predicted = model.predict(trackToPredict, batch_size=1, verbose=2)
 
+                try:
+        			trackToPredict -= mean
+                except:
+        			pass
+
+                try:
+        			trackToPredict /= std
+                except:
+        			pass
+
+                trackToPredict = np.expand_dims(trackToPredict, axis = -1)
+
+
+                if type(models) is list:
+                    predicted = models[0].predict(trackToPredict, batch_size=1, verbose=2)
+                    for x in xrange(1,len(models)):
+                        predicted += models[x].predict(trackToPredict, batch_size=1, verbose=2)
+ 
+                else:
+                    predicted = models.predict(trackToPredict, batch_size=1, verbose=2)
                 ## predicted is a matrix of probabilities, where each row has 10 probabilities of being
                 ## specific class, each row represents one predicted window
                 
@@ -186,7 +205,7 @@ def getScores(dataset, *data):
             for clip in grp.keys():
                 clip = grp[clip]
 
-                scores[clip.attrs['predicted'],clip.attrs['class']] += 1
+                scores[clip.attrs['class'],clip.attrs['predicted']] += 1
                 
                 
             

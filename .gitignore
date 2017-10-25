@@ -7,3 +7,5 @@ big*
 regular*
 small*
 test
+*.h5
+run.sh

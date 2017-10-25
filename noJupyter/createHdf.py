@@ -17,7 +17,7 @@ from os.path import isfile
 
 
 #hop 10ms, window 40
-pitchVolumes = [-2, -1, 1, 2]
+pitchVolumes = []
 
 def appendTracks(data,labels,paths,fp):
 	X, sr = sf.read(fp)
@@ -26,25 +26,25 @@ def appendTracks(data,labels,paths,fp):
 	# so we transpose
 	sound = np.transpose(sound)
 	# resample so every wave has same sampling rate
-	sound = librosa.core.resample(sound, sr, 22050)
+	sound = librosa.core.resample(sound, sr, 10000)
 	# set class number
 	classNumber = int(fp.split("/")[2].split("-")[1])
 	# compute and set mel spectrogram
 	if (sound.shape[0] == 2):
 
-		D = [np.abs(librosa.stft(channel, hop_length=512,  win_length=1024))**2 for channel in sound]
-		mel = [librosa.logamplitude(librosa.feature.melspectrogram(S=channel, sr=22050, n_mels = 60),ref_power= np.max) for channel in D]
+		D = [np.abs(librosa.stft(channel, hop_length=506,  n_fft=1024))**2 for channel in sound]
+		mel = [librosa.logamplitude(librosa.feature.melspectrogram(S=channel, sr=10000, n_mels = 32),ref_power= np.max) for channel in D]
 		mel = np.array(mel)
 		mel = np.mean(mel, axis = 0)
 	else:
-		D = np.abs(librosa.stft(sound, hop_length=512,  win_length=1024))**2
-		mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=22050, n_mels = 60),ref_power= np.max)
+		D = np.abs(librosa.stft(sound, hop_length=506,  n_fft=1024))**2
+		mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=10000, n_mels = 32),ref_power= np.max)
 	
-	delta  = librosa.feature.delta(mel)
-	outData = np.array([mel,delta])
-	outData = np.swapaxes(outData, 0, 2)
-	outData = np.swapaxes(outData, 0, 1)
-	data.append(outData)
+	# delta  = librosa.feature.delta(mel)
+	# outData = np.array([mel,delta])
+	# outData = np.swapaxes(outData, 0, 2)
+	# outData = np.swapaxes(outData, 0, 1)
+	data.append(mel)
 	labels.append(classNumber)
 	fp = fp.split("/")
 	fp = "/".join(fp[1:])
@@ -53,13 +53,13 @@ def appendTracks(data,labels,paths,fp):
 	for pitch in pitchVolumes:
 		if sound.shape[0] == 2:
 			temp = [librosa.effects.pitch_shift(channel, 22050, pitch) for channel in sound]
-			D = [np.abs(librosa.stft(channel, hop_length=512,  win_length=1024))**2 for channel in temp]
+			D = [np.abs(librosa.stft(channel, hop_length=512,  n_fft=1024))**2 for channel in temp]
 			mel = [librosa.logamplitude(librosa.feature.melspectrogram(S=channel, sr=22050, n_mels = 60),ref_power= np.max) for channel in D]
 			mel = np.array(mel)
 			mel = np.mean(mel, axis = 0)
 		else:
 			temp = librosa.effects.pitch_shift(sound, 22050, pitch)
-			D = np.abs(librosa.stft(temp, hop_length=512,  win_length=1024))**2
+			D = np.abs(librosa.stft(temp, hop_length=512,  n_fft=1024))**2
 			mel = librosa.logamplitude(librosa.feature.melspectrogram(S=D, sr=22050, n_mels = 60),ref_power= np.max)
 
 		newFp = fp.split('.')
